@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Fake News Detector</h1>
+        <p>Enter a news article to check if it's fake or real using AI models</p>
+        
+        <form id="newsForm">
+            <div class="form-group">
+                <label for="newsText">News Article Text:</label>
+                <textarea id="newsText" name="news_text" 
+                         placeholder="Paste your news article here..." 
+                         required rows="6"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="modelChoice">Select AI Model:</label>
+                <select id="modelChoice" name="model_choice" required>
+                    <option value="distilbert">🤖 DistilBERT (Recommended)</option>
+                    <option value="logistic_regression">📊 Logistic Regression</option>
+                    <option value="naive_bayes">🎯 Naive Bayes</option>
+                </select>
+            </div>
+            
+            <button type="submit" id="predictBtn">
+                <span id="btnText">🔍 Analyze News</span>
+                <span id="loadingText" style="display: none;">⏳ Processing...</span>
+            </button>
+        </form>
+        
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('newsForm');
+        const predictBtn = document.getElementById('predictBtn');
+        const btnText = document.getElementById('btnText');
+        const loadingText = document.getElementById('loadingText');
+        const resultDiv = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Show loading state
+            predictBtn.disabled = true;
+            btnText.style.display = 'none';
+            loadingText.style.display = 'inline';
+
+            const newsText = document.getElementById('newsText').value;
+            const modelChoice = document.getElementById('modelChoice').value;
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `news_text=${encodeURIComponent(newsText)}&model_choice=${encodeURIComponent(modelChoice)}`
+                });
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${result.error}</div>`;
+                } else {
+                    const isFake = result.prediction === 'FAKE';
+                    const emoji = isFake ? '🚨' : '✅';
+                    const className = isFake ? 'fake' : 'real';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result ${className}">
+                            <h3>${emoji} Result: ${result.prediction}</h3>
+                            <p>Confidence: ${result.confidence}</p>
+                        </div>
+                    `;
+                }
+                
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+                resultDiv.style.display = 'block';
+            }
+
+            // Reset button state
+            predictBtn.disabled = false;
+            btnText.style.display = 'inline';
+            loadingText.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
